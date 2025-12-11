@@ -79,7 +79,8 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Products": products,
+		"Products":  products,
+		"CartCount": len(cart),
 	}
 	tmpl.Execute(w, data)
 }

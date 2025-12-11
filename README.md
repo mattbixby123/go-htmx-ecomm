@@ -1,389 +1,339 @@
-# TechStore - Full Stack Go E-commerce Application
+# TechStore - Full Stack Go E-commerce with Square Payments
 
-## 🎯 Project Overview
+A complete e-commerce application built with Go, featuring Square payment integration, HTMX for dynamic interactions, and Tailwind CSS for styling.
 
-This is a **complete, production-ready e-commerce application** built with Go that integrates Square payment processing. It features a modern UI, secure payment handling, and a clean architecture that's easy to extend.
+## Features
 
-## ✨ What's Included
+- 🛍️ Product catalog with detailed views
+- 🛒 Shopping cart functionality
+- 💳 Secure payment processing with Square
+- 📱 Responsive design with Tailwind CSS
+- ⚡ Dynamic updates with HTMX (no page reloads)
+- 🎨 Modern UI with product images
+- 📧 Order confirmation system
+- 🔒 PCI-compliant payment handling
 
-### Core Files
+## Tech Stack
 
-1. **main.go** - Complete backend application with:
-   - Product catalog management
-   - Shopping cart functionality
-   - Square payment processing
-   - Order management
-   - RESTful API endpoints
+- **Backend**: Go (Golang)
+- **Payment Processing**: Square SDK
+- **Frontend**: HTML Templates, Tailwind CSS, HTMX
+- **No Database**: In-memory storage (easily extensible to PostgreSQL/MySQL)
 
-2. **HTML Templates** (5 files):
-   - `home.html` - Landing page with product showcase
-   - `products.html` - Product listing page
-   - `cart.html` - Shopping cart with item management
-   - `checkout.html` - Secure checkout with Square payment form
-   - `order-confirmation.html` - Order success page
+## Prerequisites
 
-3. **Configuration Files**:
-   - `.env.example` - Environment variables template
-   - `go.mod` - Go dependencies
-   - `.gitignore` - Git ignore rules
-
-4. **Development Tools**:
-   - `Makefile` - Common development commands
-   - `Dockerfile` - Container configuration
-   - `docker-compose.yml` - Multi-container orchestration
-
-5. **Documentation**:
-   - `README.md` - Comprehensive project documentation
-   - `SETUP_GUIDE.md` - Step-by-step Square payment setup
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Go 1.21+
+- Go 1.21 or higher
 - Square Developer Account (free)
+- Git
 
-### Setup Steps
+## Getting Started
 
-1. **Get Square Credentials**:
-   ```
-   → Sign up at developer.squareup.com
-   → Create an application
-   → Copy Application ID, Access Token, and Location ID
-   ```
+### 1. Clone the Repository
 
-2. **Configure Environment**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your Square credentials
-   ```
-
-3. **Install & Run**:
-   ```bash
-   go mod download
-   go run main.go
-   ```
-
-4. **Test**:
-   - Visit `http://localhost:8080`
-   - Add products to cart
-   - Use test card: `4111 1111 1111 1111`
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│                  Frontend Layer                  │
-│  (HTML Templates + Tailwind CSS + HTMX)        │
-├─────────────────────────────────────────────────┤
-│                   Go Backend                     │
-│  • HTTP Handlers                                │
-│  • Business Logic                               │
-│  • Data Models                                  │
-├─────────────────────────────────────────────────┤
-│               Square Payment SDK                 │
-│  • Payment Processing                           │
-│  • Tokenization                                 │
-│  • Security                                     │
-└─────────────────────────────────────────────────┘
+```bash
+git clone https://github.com/yourusername/techstore.git
+cd techstore
 ```
 
-## 💳 Payment Flow
+### 2. Set Up Square Account
 
-1. User adds products to cart
-2. Proceeds to checkout
-3. Enters billing/payment info
-4. Square.js tokenizes card (client-side, PCI-compliant)
-5. Token sent to backend
-6. Backend processes payment via Square API
-7. Order confirmed and displayed
+1. Go to [Square Developer Dashboard](https://developer.squareup.com/apps)
+2. Create a new application
+3. Get your credentials:
+   - **Application ID**: Found in your app's credentials
+   - **Access Token**: Generate a sandbox access token
+   - **Location ID**: Found in Locations section
 
-## 📋 API Endpoints
+### 3. Configure Environment Variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and add your Square credentials:
+
+```env
+SQUARE_APPLICATION_ID=your_application_id
+SQUARE_ACCESS_TOKEN=your_access_token
+SQUARE_LOCATION_ID=your_location_id
+SQUARE_ENVIRONMENT=sandbox
+PORT=8080
+```
+
+### 4. Install Dependencies
+
+```bash
+go mod download
+```
+
+### 5. Run the Application
+
+```bash
+go run main.go
+```
+
+Visit `http://localhost:8080` in your browser.
+
+## Project Structure
+
+```
+techstore/
+├── main.go                 # Main application logic
+├── go.mod                  # Go dependencies
+├── .env                    # Environment variables (create from .env.example)
+├── .env.example           # Example environment configuration
+├── templates/
+│   ├── home.html          # Homepage with product listing
+│   ├── products.html      # Products page
+│   ├── cart.html          # Shopping cart
+│   ├── checkout.html      # Checkout with Square payment form
+│   └── order-confirmation.html  # Order success page
+└── README.md
+```
+
+## Using Square Payments
+
+### Sandbox Testing
+
+Square provides test card numbers for sandbox testing:
+
+- **Success**: `4111 1111 1111 1111`
+- **CVV**: Any 3 digits
+- **Expiration**: Any future date
+- **ZIP**: Any 5 digits
+
+### Going to Production
+
+1. Switch to production credentials in `.env`:
+   ```env
+   SQUARE_ENVIRONMENT=production
+   SQUARE_ACCESS_TOKEN=your_production_token
+   ```
+
+2. Update the Square.js script in `templates/checkout.html`:
+   ```html
+   <!-- Change from sandbox to production -->
+   <script type="text/javascript" src="https://web.squarecdn.com/v1/square.js"></script>
+   ```
+
+3. Complete Square's verification process for production access
+
+## API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/` | Homepage |
-| GET | `/cart` | View cart |
+| GET | `/` | Homepage with products |
+| GET | `/products` | Products listing page |
+| GET | `/cart` | View shopping cart |
 | POST | `/add-to-cart` | Add item to cart |
-| POST | `/remove-from-cart` | Remove item |
-| GET | `/checkout` | Checkout page |
-| POST | `/process-payment` | Process payment |
-| GET | `/order-confirmation` | Order success |
+| POST | `/remove-from-cart` | Remove item from cart |
+| GET | `/checkout` | Checkout page with payment form |
+| POST | `/process-payment` | Process Square payment |
+| GET | `/order-confirmation` | Order success page |
 
-## 🎨 Features
+## Key Features Explained
 
-### Implemented
-✅ Product catalog with images
-✅ Shopping cart with add/remove
-✅ Square payment integration
-✅ Responsive design (mobile-friendly)
-✅ Dynamic updates (no page reloads)
-✅ Order confirmation system
-✅ Sandbox testing support
-✅ Error handling
-✅ PCI-compliant payment processing
+### 1. Square Payment Integration
 
-### Easy to Add
-- User authentication
-- Database persistence (PostgreSQL/MySQL)
-- Email notifications
-- Product search & filtering
-- Admin dashboard
-- Order history
-- Inventory management
-- Multiple payment methods
+The checkout flow uses Square's Web Payments SDK:
 
-## 🔒 Security Features
+```javascript
+// Initialize Square payments
+const payments = window.Square.payments(appId, locationId);
+const card = await payments.card();
+await card.attach('#card-container');
 
-- **PCI Compliance**: Card data never touches your server
-- **Tokenization**: Square handles sensitive data
-- **HTTPS Ready**: SSL/TLS support in production
-- **Environment Variables**: Secrets stored securely
-- **Input Validation**: Server-side validation
-- **Idempotency**: Prevents duplicate charges
+// Tokenize and process payment
+const token = await card.tokenize();
+await createPayment(token);
+```
 
-## 📦 Dependencies
+### 2. In-Memory Data Storage
+
+Current implementation uses Go maps for storage:
 
 ```go
-github.com/google/uuid        // Unique IDs
-github.com/joho/godotenv      // Environment variables
-github.com/square/square-go-sdk // Square API
+var (
+    cart   = make(map[string]CartItem)
+    orders = make(map[string]Order)
+)
 ```
 
-## 🧪 Testing
+**Note**: Data resets on server restart. For production, implement database persistence (PostgreSQL, MySQL, or MongoDB).
 
-### Sandbox Test Cards
+### 3. HTMX Dynamic Updates
 
-| Card Number | Result |
-|------------|--------|
-| 4111 1111 1111 1111 | Success |
-| 4000 0000 0000 0002 | Decline |
-| 4000 0000 0000 0119 | Error |
+Add to cart without page reload:
 
-All test cards:
-- CVV: Any 3 digits
-- Expiration: Any future date
-- ZIP: Any 5 digits
+```html
+<button onclick="addToCart('product-id')">Add to Cart</button>
+```
 
-## 🚀 Deployment Options
+## Extending the Application
 
-### Traditional VPS
+### Add Database Persistence
+
+Replace in-memory maps with a database:
+
+```go
+// Example with PostgreSQL
+import "database/sql"
+import _ "github.com/lib/pq"
+
+db, err := sql.Open("postgres", "connection-string")
+```
+
+### Add User Authentication
+
+Implement user sessions:
+
+```go
+import "github.com/gorilla/sessions"
+
+var store = sessions.NewCookieStore([]byte("secret-key"))
+```
+
+### Add Product Categories
+
+Extend the `Product` struct:
+
+```go
+type Product struct {
+    ID          string
+    Name        string
+    Description string
+    Price       int64
+    ImageURL    string
+    Category    string  // New field
+    Stock       int     // New field
+}
+```
+
+### Add Email Notifications
+
+Use a mail service:
+
+```go
+import "net/smtp"
+
+// Send order confirmation email
+func sendConfirmationEmail(email, orderID string) error {
+    // Implementation
+}
+```
+
+## Security Best Practices
+
+1. **Never commit `.env` file** - It contains sensitive credentials
+2. **Use HTTPS in production** - Required by Square
+3. **Validate user inputs** - Prevent injection attacks
+4. **Rate limit API endpoints** - Prevent abuse
+5. **Implement CSRF protection** - For production apps
+
+## Common Issues
+
+### "Failed to initialize payment form"
+
+- Check your `SQUARE_APPLICATION_ID` is correct
+- Verify `SQUARE_LOCATION_ID` matches your account
+- Ensure you're using sandbox credentials for testing
+
+### Payment always fails
+
+- Use Square's test card numbers in sandbox mode
+- Check `SQUARE_ACCESS_TOKEN` has payment permissions
+- Verify `SQUARE_ENVIRONMENT` is set to "sandbox"
+
+### Port already in use
+
 ```bash
-go build -o techstore
-./techstore
+# Change port in .env
+PORT=3000
+
+# Or kill existing process
+lsof -ti:8080 | xargs kill
 ```
 
-### Docker
+## Testing
+
+Test the full checkout flow:
+
+1. Add products to cart
+2. Proceed to checkout
+3. Use test card: `4111 1111 1111 1111`
+4. Submit payment
+5. Verify order confirmation page
+
+## Deployment
+
+### Deploy to a VPS (DigitalOcean, AWS, etc.)
+
+```bash
+# Build the binary
+go build -o techstore
+
+# Run with environment variables
+export $(cat .env | xargs) && ./techstore
+```
+
+### Deploy with Docker
+
+Create `Dockerfile`:
+
+```dockerfile
+FROM golang:1.21-alpine
+WORKDIR /app
+COPY . .
+RUN go build -o techstore
+CMD ["./techstore"]
+```
+
+Build and run:
+
 ```bash
 docker build -t techstore .
 docker run -p 8080:8080 --env-file .env techstore
 ```
 
-### Docker Compose
-```bash
-docker-compose up
-```
+## Resources
 
-### Cloud Platforms
-- Heroku
-- DigitalOcean App Platform
-- Railway
-- Fly.io
-- AWS EC2/ECS
-- Google Cloud Run
+- [Square Developer Docs](https://developer.squareup.com/docs)
+- [Square Go SDK](https://github.com/square/square-go-sdk)
+- [HTMX Documentation](https://htmx.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
 
-## 📈 Scalability Considerations
+## License
 
-### Current State (Development)
-- In-memory data storage
-- Single server instance
-- No database
+MIT License - feel free to use this project for learning or commercial purposes.
 
-### Production Recommendations
-1. **Add Database**: PostgreSQL or MySQL
-2. **Session Management**: Redis for cart/sessions
-3. **Load Balancing**: Multiple app instances
-4. **CDN**: Static assets on CloudFlare/AWS CloudFront
-5. **Caching**: Redis for product data
-6. **Monitoring**: Prometheus + Grafana
-7. **Logging**: Structured logging with ELK stack
+## Support
 
-## 🔧 Customization Guide
+For issues or questions:
+- Open an issue on GitHub
+- Check Square's developer forums
+- Review Go documentation
 
-### Add New Products
-Edit `products` slice in `main.go`:
-```go
-products = []Product{
-    {
-        ID:          "5",
-        Name:        "New Product",
-        Description: "Description here",
-        Price:       9900, // $99.00 in cents
-        ImageURL:    "https://...",
-    },
-}
-```
+## Contributing
 
-### Change Styling
-Edit any template file - Tailwind classes are inline:
-```html
-<button class="bg-blue-600 text-white px-4 py-2 rounded-lg">
-    Button
-</button>
-```
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Open a pull request
 
-### Add Database
-Replace in-memory maps with database calls:
-```go
-// Instead of: cart = make(map[string]CartItem)
-// Use: db.Query("SELECT * FROM cart WHERE user_id = ?", userId)
-```
+## Future Enhancements
 
-### Add Authentication
-Implement middleware:
-```go
-func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        // Check session/JWT
-        next(w, r)
-    }
-}
-```
-
-## 📝 Common Tasks
-
-### Run locally
-```bash
-make run
-```
-
-### Build binary
-```bash
-make build
-```
-
-### Hot reload (dev)
-```bash
-make dev  # Requires: go install github.com/cosmtrek/air@latest
-```
-
-### Format code
-```bash
-make fmt
-```
-
-### Run tests
-```bash
-make test
-```
-
-## 🐛 Troubleshooting
-
-### Payment fails
-- Check Square credentials in `.env`
-- Use sandbox test cards
-- Check browser console for errors
-- Verify Square environment (sandbox/production)
-
-### Port already in use
-```bash
-# Change PORT in .env or kill process
-lsof -ti:8080 | xargs kill
-```
-
-### Templates not found
-```bash
-# Ensure templates/ directory exists
-ls templates/
-```
-
-## 📚 Learning Resources
-
-- **Go**: [go.dev/tour](https://go.dev/tour)
-- **Square**: [developer.squareup.com/docs](https://developer.squareup.com/docs)
-- **HTMX**: [htmx.org](https://htmx.org)
-- **Tailwind**: [tailwindcss.com](https://tailwindcss.com)
-
-## 🤝 Contributing
-
-This is a learning/starter project. Feel free to:
-- Fork and modify
-- Add features
-- Submit pull requests
-- Report issues
-
-## 📄 License
-
-MIT License - Free to use for personal or commercial projects
-
-## 🎓 What You'll Learn
-
-Building/studying this project teaches:
-- Go web development
-- Payment gateway integration
-- RESTful API design
-- Frontend templating
-- Docker containerization
-- Security best practices
-- E-commerce workflows
-
-## 💡 Next Steps
-
-After getting this running:
-
-1. ✅ **Test thoroughly** with sandbox
-2. 🔐 **Add authentication** for user accounts
-3. 💾 **Implement database** for persistence
-4. 📧 **Set up email** notifications
-5. 📊 **Add analytics** tracking
-6. 🎨 **Customize design** to match brand
-7. 🚀 **Deploy to production** with HTTPS
-8. 📱 **Build mobile app** using same API
-
-## ⚡ Performance Tips
-
-- Use connection pooling for database
-- Implement caching for product data
-- Compress responses with gzip
-- Use CDN for static assets
-- Optimize images (WebP format)
-- Enable HTTP/2
-- Use goroutines for async operations
-
-## 🔐 Production Checklist
-
-Before going live:
-
-- [ ] Switch to production Square credentials
-- [ ] Enable HTTPS (required by Square)
-- [ ] Set up database backups
-- [ ] Implement rate limiting
-- [ ] Add logging and monitoring
-- [ ] Set up error alerting
-- [ ] Test disaster recovery
-- [ ] Review security best practices
-- [ ] Set up CI/CD pipeline
-- [ ] Configure proper CORS
-- [ ] Add health check endpoints
-- [ ] Set up webhook handling
-
-## 🎉 Success Metrics
-
-Track these to measure success:
-- Conversion rate (visitors → purchases)
-- Average order value
-- Cart abandonment rate
-- Payment success rate
-- Page load times
-- Mobile vs desktop usage
-- Error rates
-- Customer satisfaction
+- [ ] User authentication and accounts
+- [ ] Product search and filtering
+- [ ] Order history
+- [ ] Admin dashboard
+- [ ] Inventory management
+- [ ] Email notifications
+- [ ] Database persistence
+- [ ] Product reviews
+- [ ] Wishlist functionality
+- [ ] Multiple payment methods
 
 ---
 
-**Built with ❤️ using Go, Square, HTMX, and Tailwind CSS**
-
-For questions or issues, refer to:
-- `README.md` - General documentation
-- `SETUP_GUIDE.md` - Square payment setup
-- Square Developer Forums
-- GitHub Issues
+Built with ❤️ using Go and Square

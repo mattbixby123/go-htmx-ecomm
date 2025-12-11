@@ -40,9 +40,9 @@
                 <span>Total:</span>
                 <span>${{printf "%.2f" (divf .Total 100)}}</span>
             </div>
-            <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700">
-                Checkout
-            </button>
+            <a href="/checkout" class="block w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 text-center">
+                Proceed to Checkout
+            </a>
         </div>
         {{else}}
         <div class="bg-white rounded-lg shadow-md p-12 text-center">

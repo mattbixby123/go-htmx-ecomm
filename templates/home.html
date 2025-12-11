@@ -14,8 +14,25 @@
     </nav>
 
     <div class="max-w-7xl mx-auto px-4 py-16">
-        <h2 class="text-4xl font-bold text-gray-900 mb-4">Welcome to TechStore!</h2>
-        <p class="text-xl text-gray-600">Your one-stop shop for premium tech products</p>
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Featured Products</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {{range .Products}}
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <img src="{{.ImageURL}}" alt="{{.Name}}" class="w-full h-48 object-cover">
+                <div class="p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">{{.Name}}</h3>
+                    <p class="text-gray-600 mb-4">{{.Description}}</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-2xl font-bold text-blue-600">${{printf "%.2f" (divf .Price 100)}}</span>
+                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            Add to Cart
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
     </div>
 </body>
 </html>

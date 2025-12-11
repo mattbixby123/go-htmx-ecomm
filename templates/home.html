@@ -9,7 +9,12 @@
 <body class="bg-gray-50">
     <nav class="bg-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4">
-            <h1 class="text-2xl font-bold text-blue-600">TechStore</h1>
+            <div class="flex justify-between items-center">
+                <h1 class="text-2xl font-bold text-blue-600">TechStore</h1>
+                <a href="/cart" class="text-gray-700 hover:text-blue-600">
+                    Cart (<span id="cart-count">0</span>)
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -25,7 +30,7 @@
                     <p class="text-gray-600 mb-4">{{.Description}}</p>
                     <div class="flex items-center justify-between">
                         <span class="text-2xl font-bold text-blue-600">${{printf "%.2f" (divf .Price 100)}}</span>
-                        <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                        <button onclick="addToCart('{{.ID}}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                             Add to Cart
                         </button>
                     </div>
@@ -34,5 +39,24 @@
             {{end}}
         </div>
     </div>
+
+    <script>
+        function addToCart(productId) {
+            fetch('/add-to-cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `product_id=${productId}&quantity=1`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('cart-count').textContent = data.cartCount;
+                    alert('Added to cart!');
+                }
+            });
+        }
+    </script>
 </body>
 </html>

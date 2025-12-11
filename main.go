@@ -43,13 +43,12 @@ var products = []Product{
 
 var cart = make(map[string]CartItem)
 
-func main() {
+func init() {
 	// Load .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("Warning: .env file not found, using defaults")
-	}
+	godotenv.Load()
+}
 
+func main() {
 	// Get port from environment variable, default to 8080
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -59,6 +58,7 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/cart", cartHandler)
 	http.HandleFunc("/add-to-cart", addToCartHandler)
+	http.HandleFunc("/checkout", checkoutHandler)
 
 	log.Printf("Server starting on http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -162,4 +162,45 @@ func addToCartHandler(w http.ResponseWriter, r *http.Request) {
 		"success":   true,
 		"cartCount": len(cart),
 	})
+}
+
+func checkoutHandler(w http.ResponseWriter, r *http.Request) {
+	// Redirect to home if cart is empty
+	if len(cart) == 0 {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Create template with custom function
+	tmpl := template.New("checkout.html").Funcs(template.FuncMap{
+		"divf": func(a, b int64) float64 {
+			return float64(a) / float64(b)
+		},
+	})
+
+	tmpl, err := tmpl.ParseFiles("templates/checkout.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Template error: %v", err)
+		return
+	}
+
+	cartItems := make([]CartItem, 0, len(cart))
+	var total int64
+	for _, item := range cart {
+		cartItems = append(cartItems, item)
+		total += item.Product.Price * int64(item.Quantity)
+	}
+
+	data := map[string]interface{}{
+		"CartItems":        cartItems,
+		"Total":            total,
+		"SquareAppID":      os.Getenv("SQUARE_APPLICATION_ID"),
+		"SquareLocationID": os.Getenv("SQUARE_LOCATION_ID"),
+	}
+
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		log.Printf("Template execution error: %v", err)
+	}
 }

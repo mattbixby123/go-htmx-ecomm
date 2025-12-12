@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - TechStore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="/" class="text-2xl font-bold text-blue-600">TechStore</a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-gray-700 hover:text-blue-600">Home</a>
+                    <a href="/cart" class="text-gray-700 hover:text-blue-600">Cart</a>
+                    <a href="/profile" class="text-blue-600 font-semibold">Profile</a>
+                    <a href="/logout" class="text-gray-700 hover:text-blue-600">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div class="max-w-3xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
+
+            <!-- Profile Information -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Account Information</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between py-3 border-b">
+                        <span class="text-gray-600">Name:</span>
+                        <span class="font-semibold text-gray-900">{{.Name}}</span>
+                    </div>
+                    <div class="flex justify-between py-3 border-b">
+                        <span class="text-gray-600">Email:</span>
+                        <span class="font-semibold text-gray-900">{{.Email}}</span>
+                    </div>
+                    <div class="flex justify-between py-3">
+                        <span class="text-gray-600">Member Since:</span>
+                        <span class="font-semibold text-gray-900">{{.CreatedAt.Format "January 2, 2006"}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Change Password -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Change Password</h2>
+                
+                <div id="password-message" class="hidden mb-4" role="alert"></div>
+
+                <form id="password-form" class="space-y-4">
+                    <div>
+                        <label for="current-password" class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+                        <input type="password" id="current-password" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label for="new-password" class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                        <input type="password" id="new-password" required minlength="8"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <p class="mt-1 text-xs text-gray-500">Must be at least 8 characters</p>
+                    </div>
+                    <div>
+                        <label for="confirm-new-password" class="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+                        <input type="password" id="confirm-new-password" required
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <button type="submit" id="password-submit"
+                            class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition">
+                        <span id="password-button-text">Update Password</span>
+                        <span id="password-button-loader" class="hidden">Updating...</span>
+                    </button>
+                </form>
+
+                <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h3 class="text-sm font-semibold text-blue-900 mb-2">Password Security:</h3>
+                    <ul class="text-xs text-blue-800 space-y-1">
+                        <li>✓ Passwords are hashed client-side before transmission</li>
+                        <li>✓ Additional bcrypt hashing on server (cost 12)</li>
+                        <li>✓ Each password uses unique automatic salt</li>
+                        <li>✓ Plain text passwords never stored or transmitted</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Account Actions -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">Account Actions</h2>
+                <div class="space-y-3">
+                    <button class="w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        View Order History
+                    </button>
+                    <button class="w-full text-left px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        Manage Payment Methods
+                    </button>
+                    <a href="/logout" class="block w-full text-center px-4 py-3 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition">
+                        Sign Out
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <p>&copy; 2024 TechStore. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        const userEmail = '{{.Email}}';
+
+        document.getElementById('password-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmNewPassword = document.getElementById('confirm-new-password').value;
+
+            const messageDiv = document.getElementById('password-message');
+            const submitButton = document.getElementById('password-submit');
+            const buttonText = document.getElementById('password-button-text');
+            const buttonLoader = document.getElementById('password-button-loader');
+
+            // Validate passwords match
+            if (newPassword !== confirmNewPassword) {
+                messageDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4';
+                messageDiv.textContent = 'New passwords do not match';
+                messageDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Validate password length
+            if (newPassword.length < 8) {
+                messageDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4';
+                messageDiv.textContent = 'Password must be at least 8 characters';
+                messageDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Client-side password hashing
+            const clientSalt = CryptoJS.SHA256(userEmail.toLowerCase()).toString();
+            const hashedCurrentPassword = CryptoJS.PBKDF2(currentPassword, clientSalt, {
+                keySize: 256/32,
+                iterations: 1000
+            }).toString();
+            const hashedNewPassword = CryptoJS.PBKDF2(newPassword, clientSalt, {
+                keySize: 256/32,
+                iterations: 1000
+            }).toString();
+
+            // Disable button
+            submitButton.disabled = true;
+            buttonText.classList.add('hidden');
+            buttonLoader.classList.remove('hidden');
+            messageDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch('/update-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_password: hashedCurrentPassword,
+                        new_password: hashedNewPassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    messageDiv.className = 'bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4';
+                    messageDiv.textContent = 'Password updated successfully!';
+                    messageDiv.classList.remove('hidden');
+                    
+                    // Clear form
+                    document.getElementById('password-form').reset();
+                } else {
+                    messageDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4';
+                    messageDiv.textContent = data.error || 'Failed to update password';
+                    messageDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Password update error:', error);
+                messageDiv.className = 'bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4';
+                messageDiv.textContent = 'An error occurred. Please try again.';
+                messageDiv.classList.remove('hidden');
+            } finally {
+                submitButton.disabled = false;
+                buttonText.classList.remove('hidden');
+                buttonLoader.classList.add('hidden');
+            }
+        });
+
+        // Real-time password validation
+        document.getElementById('new-password').addEventListener('input', function() {
+            const newPassword = this.value;
+            const confirmPassword = document.getElementById('confirm-new-password').value;
+            
+            if (confirmPassword && newPassword !== confirmPassword) {
+                document.getElementById('confirm-new-password').setCustomValidity('Passwords do not match');
+            } else {
+                document.getElementById('confirm-new-password').setCustomValidity('');
+            }
+        });
+
+        document.getElementById('confirm-new-password').addEventListener('input', function() {
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = this.value;
+            
+            if (newPassword !== confirmPassword) {
+                this.setCustomValidity('Passwords do not match');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    </script>
+</body>
+</html>

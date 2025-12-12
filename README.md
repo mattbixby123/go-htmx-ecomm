@@ -150,6 +150,142 @@ The server will start on http://localhost:8080
 └── go.mod               # Go dependencies
 ```
 
+## 🏗️ Architecture
+
+### High-Level Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                     CLIENT (Browser)                     │
+│  ┌─────────────┐  ┌──────────────┐  ┌───────────────┐  │
+│  │   HTML      │  │  Tailwind    │  │   CryptoJS    │  │
+│  │ (rendered)  │  │     CSS      │  │   (PBKDF2)    │  │
+│  └─────────────┘  └──────────────┘  └───────────────┘  │
+└────────────────────────┬────────────────────────────────┘
+                         │ HTTP/HTTPS
+                         │ (JSON/Form Data)
+┌────────────────────────▼────────────────────────────────┐
+│                   GO WEB SERVER                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              main.go (HTTP Handlers)              │   │
+│  │  • homeHandler()      • cartHandler()            │   │
+│  │  • checkoutHandler()  • processPaymentHandler()  │   │
+│  └──────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              auth.go (Authentication)             │   │
+│  │  • JWT Generation     • Password Hashing         │   │
+│  │  • Session Management • Auth Middleware          │   │
+│  └──────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │            database.go (Data Layer)               │   │
+│  │  • PostgreSQL Connection  • Migrations           │   │
+│  │  • GORM ORM              • Data Seeding          │   │
+│  └──────────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │              models.go (Data Models)              │   │
+│  │  User, Product, Cart, Order, Session             │   │
+│  └──────────────────────────────────────────────────┘   │
+└────────────────────────┬────────────────────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+┌───────▼──────┐  ┌──────▼──────┐  ┌─────▼──────┐
+│  PostgreSQL  │  │   Square    │  │  CDN       │
+│   Database   │  │  Payments   │  │  (Tailwind,│
+│              │  │     API     │  │  CryptoJS) │
+└──────────────┘  └─────────────┘  └────────────┘
+```
+
+### Architecture Pattern
+
+This application follows a **Server-Side Rendered (SSR)** MVC-like architecture:
+
+**Model** (Data Layer)
+- `models.go`: Defines data structures (User, Product, Cart, Order)
+- `database.go`: Database operations using GORM ORM
+- PostgreSQL stores all persistent data
+
+**View** (Presentation Layer)
+- `templates/*.html`: Go HTML templates rendered server-side
+- Tailwind CSS (CDN): Utility-first styling
+- No separate frontend framework needed
+
+**Controller** (Business Logic)
+- `main.go`: HTTP handlers, cart logic, payment processing
+- `auth.go`: Authentication, JWT tokens, password hashing
+- Routes requests and renders templates with data
+
+### Technology Stack
+
+**Backend:**
+- Go 1.21+ (HTTP server, business logic)
+- PostgreSQL 17 (data persistence)
+- GORM (ORM for database operations)
+- JWT (authentication tokens)
+- bcrypt (password hashing)
+
+**Frontend:**
+- Go `html/template` (server-side rendering)
+- Tailwind CSS (styling via CDN)
+- Vanilla JavaScript (AJAX requests, form handling)
+- CryptoJS (client-side password hashing)
+
+**External Services:**
+- Square Payments API (payment processing)
+- CDN (Tailwind CSS, CryptoJS)
+
+### Request Flow Example
+
+```
+1. User clicks "Add to Cart"
+   ↓
+2. JavaScript sends AJAX POST to /add-to-cart
+   ↓
+3. Go extracts JWT token from cookie
+   ↓
+4. Go validates user authentication
+   ↓
+5. Go updates cart in PostgreSQL
+   ↓
+6. Go returns JSON response {success: true, cartCount: 3}
+   ↓
+7. JavaScript updates cart badge in UI
+   (No page reload needed!)
+```
+
+### Styling with Tailwind CSS
+
+This app uses **Tailwind CSS** from CDN (not HTMX). Tailwind provides utility classes for rapid UI development:
+
+```html
+<!-- Traditional CSS -->
+<button class="custom-button">Click me</button>
+<style>
+  .custom-button {
+    background: blue;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+  }
+</style>
+
+<!-- Tailwind CSS (used in this app) -->
+<button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+  Click me
+</button>
+```
+
+**Benefits:**
+- ✅ No separate CSS files needed
+- ✅ Responsive design built-in (`md:`, `lg:` prefixes)
+- ✅ Consistent styling across pages
+- ✅ Fast development without context switching
+
+**Loaded via CDN:**
+```html
+<script src="https://cdn.tailwindcss.com"></script>
+```
+
 ## 🗄️ Database Schema
 
 The application automatically creates these tables:

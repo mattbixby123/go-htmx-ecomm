@@ -15,65 +15,38 @@ import (
 	"github.com/joho/godotenv"
 )
 
-type Product struct {
-	ID          string
-	Name        string
-	Description string
-	Price       int64 // in cents
-	ImageURL    string
-}
-
-type Order struct {
-	ID        string
-	Items     []CartItem
-	Total     int64
-	Status    string
-	CreatedAt time.Time
-}
-
-type CartItem struct {
-	Product  Product
-	Quantity int
-}
-
-var products = []Product{
-	{
-		ID:          "1",
-		Name:        "Premium Headphones",
-		Description: "High-quality wireless headphones with noise cancellation",
-		Price:       29900,
-		ImageURL:    "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400",
-	},
-	{
-		ID:          "2",
-		Name:        "Smart Watch",
-		Description: "Fitness tracking smartwatch with heart rate monitor",
-		Price:       19900,
-		ImageURL:    "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400",
-	},
-}
-
-var cart = make(map[string]CartItem)
-var orders = make(map[string]Order)
-
 func init() {
 	// Load .env file
-	godotenv.Load()
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found")
+	}
 }
 
 func main() {
+	// Initialize database
+	InitDatabase()
+
 	// Get port from environment variable, default to 8080
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
+	// Public routes
 	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/cart", cartHandler)
-	http.HandleFunc("/add-to-cart", addToCartHandler)
-	http.HandleFunc("/checkout", checkoutHandler)
-	http.HandleFunc("/process-payment", processPaymentHandler)
-	http.HandleFunc("/order-confirmation", orderConfirmationHandler)
+	http.HandleFunc("/register", registerHandler)
+	http.HandleFunc("/login", loginHandler)
+
+	// Protected routes (require authentication)
+	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/profile", authMiddleware(profileHandler))
+	http.HandleFunc("/update-password", authMiddleware(updatePasswordHandler))
+	http.HandleFunc("/cart", authMiddleware(cartHandler))
+	http.HandleFunc("/add-to-cart", authMiddleware(addToCartHandler))
+	http.HandleFunc("/remove-from-cart", authMiddleware(removeFromCartHandler))
+	http.HandleFunc("/checkout", authMiddleware(checkoutHandler))
+	http.HandleFunc("/process-payment", authMiddleware(processPaymentHandler))
+	http.HandleFunc("/order-confirmation", authMiddleware(orderConfirmationHandler))
 
 	log.Printf("Server starting on http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -93,39 +66,63 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get products from database
+	var products []Product
+	DB.Find(&products)
+
+	// Check if user is logged in
+	user, _ := getCurrentUser(r)
+
+	// Get cart count for logged-in users
+	var cartCount int64
+	if user != nil {
+		DB.Model(&CartItem{}).Where("user_id = ?", user.ID).Count(&cartCount)
+	}
+
 	data := map[string]interface{}{
 		"Products":  products,
-		"CartCount": len(cart),
+		"CartCount": cartCount,
+		"User":      user,
 	}
 	tmpl.Execute(w, data)
 }
 
 func cartHandler(w http.ResponseWriter, r *http.Request) {
-	// Create template with custom function (same as homeHandler)
+	user, err := getCurrentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Create template with custom function
 	tmpl := template.New("cart.html").Funcs(template.FuncMap{
 		"divf": func(a, b int64) float64 {
 			return float64(a) / float64(b)
 		},
 	})
 
-	tmpl, err := tmpl.ParseFiles("templates/cart.html")
+	tmpl, err = tmpl.ParseFiles("templates/cart.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Template error: %v", err)
 		return
 	}
 
-	cartItems := make([]CartItem, 0, len(cart))
+	// Get cart items from database with product info
+	var cartItems []CartItem
+	DB.Preload("Product").Where("user_id = ?", user.ID).Find(&cartItems)
+
+	// Calculate total
 	var total int64
-	for _, item := range cart {
-		cartItems = append(cartItems, item)
+	for _, item := range cartItems {
 		total += item.Product.Price * int64(item.Quantity)
 	}
 
 	data := map[string]interface{}{
 		"CartItems": cartItems,
 		"Total":     total,
-		"CartCount": len(cart),
+		"CartCount": len(cartItems),
+		"User":      user,
 	}
 
 	err = tmpl.Execute(w, data)
@@ -140,6 +137,13 @@ func addToCartHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, err := getCurrentUser(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Not authenticated"})
+		return
+	}
+
 	productID := r.FormValue("product_id")
 	quantityStr := r.FormValue("quantity")
 	quantity, _ := strconv.Atoi(quantityStr)
@@ -147,41 +151,74 @@ func addToCartHandler(w http.ResponseWriter, r *http.Request) {
 		quantity = 1
 	}
 
-	// Find product
-	var product *Product
-	for _, p := range products {
-		if p.ID == productID {
-			product = &p
-			break
-		}
-	}
-
-	if product == nil {
+	// Check if product exists
+	var product Product
+	if err := DB.Where("id = ?", productID).First(&product).Error; err != nil {
 		http.Error(w, "Product not found", http.StatusNotFound)
 		return
 	}
 
-	// Add to cart
-	if existingItem, exists := cart[productID]; exists {
+	// Check if item already in cart
+	var existingItem CartItem
+	result := DB.Where("user_id = ? AND product_id = ?", user.ID, productID).First(&existingItem)
+
+	if result.Error == nil {
+		// Update quantity
 		existingItem.Quantity += quantity
-		cart[productID] = existingItem
+		DB.Save(&existingItem)
 	} else {
-		cart[productID] = CartItem{
-			Product:  *product,
-			Quantity: quantity,
+		// Create new cart item
+		newItem := CartItem{
+			UserID:    user.ID,
+			ProductID: productID,
+			Quantity:  quantity,
 		}
+		DB.Create(&newItem)
 	}
+
+	// Get updated cart count
+	var cartCount int64
+	DB.Model(&CartItem{}).Where("user_id = ?", user.ID).Count(&cartCount)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":   true,
-		"cartCount": len(cart),
+		"cartCount": cartCount,
 	})
 }
 
+func removeFromCartHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, err := getCurrentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	productID := r.FormValue("product_id")
+	
+	// Delete cart item
+	DB.Where("user_id = ? AND product_id = ?", user.ID, productID).Delete(&CartItem{})
+
+	http.Redirect(w, r, "/cart", http.StatusSeeOther)
+}
+
 func checkoutHandler(w http.ResponseWriter, r *http.Request) {
-	// Redirect to home if cart is empty
-	if len(cart) == 0 {
+	user, err := getCurrentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Get cart items
+	var cartItems []CartItem
+	DB.Preload("Product").Where("user_id = ?", user.ID).Find(&cartItems)
+
+	if len(cartItems) == 0 {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -193,17 +230,16 @@ func checkoutHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
-	tmpl, err := tmpl.ParseFiles("templates/checkout.html")
+	tmpl, err = tmpl.ParseFiles("templates/checkout.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		log.Printf("Template error: %v", err)
 		return
 	}
 
-	cartItems := make([]CartItem, 0, len(cart))
+	// Calculate total
 	var total int64
-	for _, item := range cart {
-		cartItems = append(cartItems, item)
+	for _, item := range cartItems {
 		total += item.Product.Price * int64(item.Quantity)
 	}
 
@@ -212,6 +248,7 @@ func checkoutHandler(w http.ResponseWriter, r *http.Request) {
 		"Total":            total,
 		"SquareAppID":      os.Getenv("SQUARE_APPLICATION_ID"),
 		"SquareLocationID": os.Getenv("SQUARE_LOCATION_ID"),
+		"User":             user,
 	}
 
 	err = tmpl.Execute(w, data)
@@ -226,6 +263,13 @@ func processPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user, err := getCurrentUser(r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Not authenticated"})
+		return
+	}
+
 	var requestBody struct {
 		SourceID string `json:"sourceId"`
 		Email    string `json:"email"`
@@ -237,9 +281,19 @@ func processPaymentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get cart items
+	var cartItems []CartItem
+	DB.Preload("Product").Where("user_id = ?", user.ID).Find(&cartItems)
+
+	if len(cartItems) == 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Cart is empty"})
+		return
+	}
+
 	// Calculate total
 	var total int64
-	for _, item := range cart {
+	for _, item := range cartItems {
 		total += item.Product.Price * int64(item.Quantity)
 	}
 
@@ -347,39 +401,53 @@ func processPaymentHandler(w http.ResponseWriter, r *http.Request) {
 	payment := apiResponse["payment"].(map[string]interface{})
 	paymentID := payment["id"].(string)
 
-	// Create order record
-	orderID := uuid.New().String()
-	cartItems := make([]CartItem, 0, len(cart))
-	for _, item := range cart {
-		cartItems = append(cartItems, item)
-	}
-
+	// Create order in database
 	order := Order{
-		ID:        orderID,
-		Items:     cartItems,
+		ID:        uuid.New().String(),
+		UserID:    user.ID,
 		Total:     total,
 		Status:    "completed",
+		PaymentID: paymentID,
 		CreatedAt: time.Now(),
 	}
-	orders[orderID] = order
+	DB.Create(&order)
 
-	// Clear cart
-	cart = make(map[string]CartItem)
+	// Create order items
+	for _, item := range cartItems {
+		orderItem := OrderItem{
+			OrderID:   order.ID,
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			Price:     item.Product.Price,
+		}
+		DB.Create(&orderItem)
+	}
+
+	// Clear user's cart
+	DB.Where("user_id = ?", user.ID).Delete(&CartItem{})
 
 	// Return success
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":   true,
-		"orderID":   orderID,
+		"orderID":   order.ID,
 		"paymentID": paymentID,
 	})
 }
 
 func orderConfirmationHandler(w http.ResponseWriter, r *http.Request) {
-	orderID := r.URL.Query().Get("id")
-	order, exists := orders[orderID]
+	user, err := getCurrentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
-	if !exists {
+	orderID := r.URL.Query().Get("id")
+
+	// Get order from database
+	var order Order
+	result := DB.Preload("Items.Product").Where("id = ? AND user_id = ?", orderID, user.ID).First(&order)
+	if result.Error != nil {
 		http.Error(w, "Order not found", http.StatusNotFound)
 		return
 	}
@@ -390,11 +458,20 @@ func orderConfirmationHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
-	tmpl, err := tmpl.ParseFiles("templates/order-confirmation.html")
+	tmpl, err = tmpl.ParseFiles("templates/order-confirmation.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	tmpl.Execute(w, order)
+	data := map[string]interface{}{
+		"ID":        order.ID,
+		"Items":     order.Items,
+		"Total":     order.Total,
+		"Status":    order.Status,
+		"CreatedAt": order.CreatedAt,
+		"User":      user,
+	}
+
+	tmpl.Execute(w, data)
 }

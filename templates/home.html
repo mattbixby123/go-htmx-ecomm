@@ -11,9 +11,19 @@
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex justify-between items-center">
                 <h1 class="text-2xl font-bold text-blue-600">TechStore</h1>
-                <a href="/cart" class="text-gray-700 hover:text-blue-600">
-                  Cart (<span id="cart-count">{{.CartCount}}</span>)
-                </a>
+                <div class="flex items-center space-x-4">
+                    <a href="/cart" class="text-gray-700 hover:text-blue-600">
+                        Cart (<span id="cart-count">{{.CartCount}}</span>)
+                    </a>
+                    {{if .User}}
+                        <a href="/profile" class="text-gray-700 hover:text-blue-600">Profile</a>
+                        <a href="/logout" class="text-gray-700 hover:text-blue-600">Logout</a>
+                        <span class="text-sm text-gray-600">Hello, {{.User.Name}}!</span>
+                    {{else}}
+                        <a href="/login" class="text-gray-700 hover:text-blue-600">Login</a>
+                        <a href="/register" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Sign Up</a>
+                    {{end}}
+                </div>
             </div>
         </div>
     </nav>

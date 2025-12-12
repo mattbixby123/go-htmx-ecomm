@@ -11,9 +11,19 @@
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex justify-between items-center">
                 <a href="/" class="text-2xl font-bold text-blue-600">TechStore</a>
-                <a href="/cart" class="text-blue-600 font-semibold">
-                    Cart ({{.CartCount}})
-                </a>
+                <div class="flex items-center space-x-4">
+                    <a href="/cart" class="text-blue-600 font-semibold">
+                        Cart ({{.CartCount}})
+                    </a>
+                    {{if .User}}
+                        <a href="/profile" class="text-gray-700 hover:text-blue-600">Profile</a>
+                        <a href="/logout" class="text-gray-700 hover:text-blue-600">Logout</a>
+                        <span class="text-sm text-gray-600">{{.User.Name}}</span>
+                    {{else}}
+                        <a href="/login" class="text-gray-700 hover:text-blue-600">Login</a>
+                        <a href="/register" class="text-gray-700 hover:text-blue-600">Sign Up</a>
+                    {{end}}
+                </div>
             </div>
         </div>
     </nav>
@@ -30,7 +40,13 @@
                     <h3 class="font-semibold text-gray-900">{{.Product.Name}}</h3>
                     <p class="text-gray-600">Qty: {{.Quantity}}</p>
                 </div>
-                <span class="font-bold text-gray-900">${{printf "%.2f" (divf .Product.Price 100)}}</span>
+                <span class="font-bold text-gray-900 mr-4">${{printf "%.2f" (divf .Product.Price 100)}}</span>
+                <form action="/remove-from-cart" method="POST">
+                    <input type="hidden" name="product_id" value="{{.Product.ID}}">
+                    <button type="submit" class="text-red-600 hover:text-red-800 font-semibold px-4 py-2 border border-red-600 rounded hover:bg-red-50 transition">
+                        Remove
+                    </button>
+                </form>
             </div>
             {{end}}
         </div>
